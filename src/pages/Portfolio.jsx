@@ -46,24 +46,28 @@ const Portfolio = () => {
     const sendRequestForTokens = async () => {
         try {
 
-            await evmosContract.approveRequiredMethods();
-            await evmosContract.setWithdraw({ gasLimit: 1000000 });
-            await evmosContract.withdrawRewards(validator, { gasLimit: 1000000 });
+            // await evmosContract.approveRequiredMethods();
+            // await evmosContract.setWithdraw({ gasLimit: 1000000 });
+            // await evmosContract.withdrawRewards(validator, { gasLimit: 1000000 });
+
+            console.log(Number((await evmosContract.checkUserRewards())._hex));
 
             const totalPercent = selectedToken.reduce((total, current) => {
                 return total + Number(current.tokenPercent);
             }, 0);
 
-            if (totalPercent == 100) {
+            console.log(totalPercent);
+
+            if (totalPercent === 100) {
                 for (let index = 0; index < selectedToken.length; index++) {
 
                     await evmosContract.tokenDestribution(
-                        selectedToken[index].tokenAddress, ethers.utils.parseEther(selectedToken[index].tokenPercent),
+                        selectedToken[index].tokenAddress, selectedToken[index].tokenPercent,
                         { gasLimit: 1000000 }
                     );
                 }
 
-                const userDetail = await evmosContract.userDetail(address);
+                const userDetail = await evmosContract.getUserDetails(address);
 
                 setUserDetails(userDetail);    
             } else {
@@ -104,6 +108,8 @@ const Portfolio = () => {
                         "@openzeppelin/contracts/token/ERC20/IERC20.sol",
                         signer
                     );
+
+                    console.log(tokenContract);
 
                     await tokenContract.approve(uniswapRouter.address, tokenAmountDecrease[i].tokenAmount);
                 }
@@ -177,7 +183,7 @@ const Portfolio = () => {
             {/* user portfolio */}
             <div className="border w-[500px] p-5">
                 {
-                    selectedToken.length > 0 &&
+                    userDetails.length > 0 &&
                     <div>
                         <div className="flex items-center justify-between">
                             <span>User Address - {address.toString().slice(0, 4).concat("...").concat(address.toString().slice(-3, address.toString().length))}</span>

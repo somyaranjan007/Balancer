@@ -119,7 +119,7 @@ contract Portfolio {
     ) public {
         require(userRewards[msg.sender] > 0, "Sender doesn't have rewards!");
 
-        uint256 amountIn = SafeMath.mul(userRewards[msg.sender], ( SafeMath.div(_tokenPercent, 100)));
+        uint256 amountIn = SafeMath.div(SafeMath.mul(userRewards[msg.sender], _tokenPercent), 100);
 
         uint256 amountOut = getAmount(
             amountIn,
@@ -170,7 +170,7 @@ contract Portfolio {
 
     function balancePortfolio() public {
         for (uint256 i = 0; i < userDetail[msg.sender].length; i++) {
-            uint256 amountIn = SafeMath.mul(userTotalAmount[msg.sender], SafeMath.div(userDetail[msg.sender][i].tokenPercent, 100));
+            uint256 amountIn = SafeMath.div(SafeMath.mul(userTotalAmount[msg.sender], userDetail[msg.sender][i].tokenPercent), 100);
                 
             uint256 amountOut = getAmount(
                 amountIn,

@@ -15,7 +15,7 @@ const ContextProvider = ({ children }) => {
     const [userDetails, setUserDetails] = useState([]);
     const [userTotalAmounts, setUserTotalAmounts] = useState(0);
 
-    const contractAddress = "0x57cCa686019eE0f99Bf083A013B181D48F0B6068";
+    const contractAddress = "0x9BAd4F0f2A72f83CE05725828e19412947F511A5";
     const contractABI = ABI.abi;
 
     const connectWallet = async () => {
