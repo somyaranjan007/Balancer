@@ -1,25 +1,28 @@
 import React, { useState, useContext } from 'react'
+import { FiPlusCircle } from "react-icons/fi";
 import { tokenArray } from "./pagesData/constant";
 import { portfolioAppState } from '../context/context';
 import { ethers } from 'ethers';
 
+
 const Portfolio = () => {
+
+    const [listedTokenOn, setListedTokenOn] = useState(false);
 
     const [selectedToken, setSelectedToken] = useState([]);
     const [percentValue, setPercentValue] = useState({});
     const [maxPercentValue, setMaxPercentValue] = useState(100);
     const [purchaseToken, setPurchaseToken] = useState([]);
 
-    const validator = "evmosvaloper158wwas4v6fgcu2x3plg70s6u0fm0lle237kltr";
-
-    const { 
-        evmosContract, 
-        address, 
-        signer, 
-        userDetails, 
-        setUserDetails, 
-        setUserTotalAmounts, 
-        userTotalAmounts 
+    const {
+        evmosContract,
+        address,
+        signer,
+        validator,
+        userDetails,
+        setUserDetails,
+        setUserTotalTokenAmount,
+        userTotalTokenAmount
     } = useContext(portfolioAppState);
 
 
@@ -37,44 +40,53 @@ const Portfolio = () => {
         if ((selectedToken.filter((token) => token.tokenAddress == tokens.tokenAddress)).length > 0) return;
 
         const tokenObject = { ...tokens, tokenPercent: percentValue[`percent${index}`] };
-        setSelectedToken((prevToken) => [...prevToken, tokenObject]);
 
+        setSelectedToken((prevToken) => [...prevToken, tokenObject]);
         setMaxPercentValue((prev) => prev - percentValue[`percent${index}`]);
         setPercentValue([]);
+        setListedTokenOn(false);
     }
 
     const sendRequestForTokens = async () => {
         try {
 
-            // await evmosContract.approveRequiredMethods();
-            // await evmosContract.setWithdraw({ gasLimit: 1000000 });
-            // await evmosContract.withdrawRewards(validator, { gasLimit: 1000000 });
+            await evmosContract.approveRequiredMethods();
+            await evmosContract.setWithdraw({ gasLimit: 1000000 });
+            await evmosContract.withdrawRewards(validator, { gasLimit: 1000000 });
 
-            console.log(await evmosContract.checkUserRewards());
+            console.log(await evmosContract.getUserContractStakedRewards());
 
-            // const totalPercent = selectedToken.reduce((total, current) => {
-            //     return total + Number(current.tokenPercent);
-            // }, 0);
+            const totalPercent = selectedToken.reduce((total, current) => {
+                return total + Number(current.tokenPercent);
+            }, 0);
 
-            // console.log(totalPercent);
+            console.log(totalPercent);
 
-            // if (totalPercent === 100) {
-            //     for (let index = 0; index < selectedToken.length; index++) {
+            if (totalPercent === 100) {
+                for (let index = 0; index < selectedToken.length; index++) {
 
-            //         await evmosContract.tokenDestribution(
-            //             selectedToken[index].tokenAddress, selectedToken[index].tokenPercent,
-            //             { gasLimit: 1000000 }
-            //         );
-            //     }
+                    const _transaction = await evmosContract.tokenDestribution(
+                        selectedToken[index].tokenAddress, selectedToken[index].tokenPercent,
+                        { gasLimit: 1000000 }
+                    );
 
-            //     const userDetail = await evmosContract.getUserDetails(address);
+                    await signer.sendTransaction(_transaction);
+                }
 
-            //     setUserDetails(userDetail);    
-            // } else {
-            //     console.log("You didn't provide enough percent for tokens")
-            //     setSelectedToken([]);
-            //     setMaxPercentValue(100);
-            // }
+                const _transaction = await evmosContract.calculatePortfolio();
+                await signer.signedTransaction(_transaction);
+                
+                const _userDetail = await evmosContract.getUserDetails();
+                setUserDetails(_userDetail);
+
+                const _userTotalTokenAmount = await evmosContract.getUserTotalTokenAmount();
+                setUserTotalTokenAmount(Number(_userTotalTokenAmount._hex));
+                
+            } else {
+                console.log("You didn't provide enough percent for tokens")
+                setSelectedToken([]);
+                setMaxPercentValue(100);
+            }
 
         } catch (error) {
             console.log(error);
@@ -83,11 +95,12 @@ const Portfolio = () => {
 
     const calculatePortfolio = async () => {
         try {
-            const transaction = await evmosContract.calculatePortfolio();
-            await signer.signedTransaction(transaction);
+            const _transaction = await evmosContract.calculatePortfolio();
+            await signer.signedTransaction(_transaction);
 
-            const userTotalAmount = await evmosContract.userTotalAmount(address);
-            setUserTotalAmounts(userTotalAmount);
+            const _userTotalTokenAmount = await evmosContract.getUserTotalTokenAmount();
+            setUserTotalTokenAmount(Number(_userTotalTokenAmount._hex));
+
         } catch (error) {
             console.log(error);
         }
@@ -98,7 +111,7 @@ const Portfolio = () => {
             const transaction = await evmosContract.balancePortfolio();
             await signer.signedTransaction(transaction);
 
-            const tokenAmountDecrease = await evmosContract.tokenAmountDecrease(address);
+            const tokenAmountDecrease = await evmosContract.getTokenAmountDecrease();
             const uniswapRouter = await evmosContract.router();
 
             if (tokenAmountDecrease.length > 0) {
@@ -118,15 +131,15 @@ const Portfolio = () => {
                 await signer.signedTransaction(buyTokens);
             }
 
-            const tokenAmountIncrease = await evmosContract.tokenAmountIncrease(address);
+            const tokenAmountIncrease = await evmosContract.getTokenAmountIncrease();
 
             if (tokenAmountIncrease.length > 0) {
                 const sellTokens = await evmosContract.sellToken();
                 await signer.signedTransaction(sellTokens);
             }
 
-            const userDetail = await evmosContract.getUserDetails(address);
-            setUserDetails(userDetail);
+            const _userDetail = await evmosContract.getUserDetails();
+            setUserDetails(_userDetail);
         } catch (error) {
             console.log(error)
         }
@@ -136,40 +149,49 @@ const Portfolio = () => {
         <div className="flex justify-between items-start h-full bg-slate-800 text-white px-10 py-5">
             <div>
                 {/* Listed Tokens Section */}
-                <div className="">
+                <div className="w-[400px] py-2 px-5">
                     <h1 className="font-semibold text-[18px]">Listed Token</h1>
-                    <div>
-                        {
-                            tokenArray.map((tokens, index) => {
-                                return (
-                                    <div key={index} className="flex items-center justify-between py-2">
-                                        <img src={tokens.tokenImage} alt="" className="w-[25px] h-[25px]" />
-                                        <h3 className="w-[150px] ml-2">{tokens.tokenName}</h3>
-                                        <span>Percent</span>
 
-                                        <form action="" onSubmit={(e) => selectTokens(e, tokens, index)}>
-                                            <input type="number" name={`percent${index}`} min="1" max={maxPercentValue} value={percentValue[`percent${index}`] || ''} onChange={handleInputChange} required className="border text-black outline-none w-[70px] ml-2 p-2 rounded" />
-                                            <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded focus:outline-none focus:shadow-outline ml-2">Choose Token</button>
-                                        </form>
-                                    </div>
-                                )
-                            })
-                        }
+                    <div className="flex items-center justify-between my-2 py-3 px-4 bg-slate-700 rounded">
+                        <span className="text-[16px]">Choose Tokens</span>
+                        <FiPlusCircle className="text-[25px]" onClick={() => setListedTokenOn(!listedTokenOn)} />
                     </div>
+
+                    {
+                        listedTokenOn &&
+                        <div>
+                            {
+                                tokenArray.map((tokens, index) => {
+                                    return (
+                                        <div key={index} className="flex items-center justify-between py-3 bg-slate-700 my-2 px-4 rounded">
+                                            <img src={tokens.tokenImage} alt="" className="w-[25px] h-[25px]" />
+                                            <h3 className="w-[150px] ml-2">{tokens.tokenName}</h3>
+                                            <span>%</span>
+
+                                            <form action="" onSubmit={(e) => selectTokens(e, tokens, index)} className="flex items-center justify-center">
+                                                <input type="number" name={`percent${index}`} min="1" max={maxPercentValue} value={percentValue[`percent${index}`] || ''} onChange={handleInputChange} required className="border text-black outline-none w-[70px] ml-2 p-2 rounded" />
+                                                <button className="rounded ml-2"><FiPlusCircle className="text-[25px]" /></button>
+                                            </form>
+                                        </div>
+                                    )
+                                })
+                            }
+                        </div>
+                    }
                 </div>
                 {/* Selected Tokens Section */}
                 {
                     selectedToken.length > 0 &&
-                    <div className="my-10">
+                    <div className="my-10 w-[400px] py-2 px-5">
                         <h1 className="font-semibold text-[18px]">Selected Token</h1>
 
                         {
                             selectedToken.map((tokens, index) => {
                                 return (
-                                    <div key={index} className="flex items-center justify-between py-2">
+                                    <div key={index} className="flex items-center justify-between py-3 bg-slate-700 my-2 px-4 rounded">
                                         <img src={tokens.tokenImage} alt="" className="w-[25px] h-[25px]" />
                                         <h3 className="w-[150px] ml-2">{tokens.tokenName}</h3>
-                                        <span>Percent</span>
+                                        <span>%</span>
                                         <span>{tokens.tokenPercent}</span>
                                     </div>
                                 )
@@ -181,35 +203,27 @@ const Portfolio = () => {
                 }
             </div>
             {/* user portfolio */}
-            <div className="border w-[500px] p-5">
+            <div className="w-[500px] p-5 bg-slate-700 rounded">
                 {
-                    userDetails.length > 0 &&
+                    tokenArray.length > 0 &&
                     <div>
                         <div className="flex items-center justify-between">
                             <span>User Address - {address.toString().slice(0, 4).concat("...").concat(address.toString().slice(-3, address.toString().length))}</span>
-                            <span>Total Balance - {userTotalAmounts}</span>
+                            <span>Total Balance - {userTotalTokenAmount}</span>
                         </div>
                         <div>
                             {
                                 tokenArray.map((tokens, index) => {
                                     return (
-                                        <div key={index} className="p-2 border my-2">
+                                        <div key={index} className="p-2 bg-slate-600 flex items-center justify-between my-4 rounded px-4 py-3">
                                             <div className="flex item-center">
                                                 {
                                                     tokenArray.map((image, index) => tokens.tokenAddress === image.tokenAddress && <img src={image.tokenImage} className="w-[25px] h-[25px] mr-4" key={index} />)
                                                 }
                                                 <h3 className="w-[150px]">{tokens.tokenName}</h3>
                                             </div>
-
-                                            <div>
-                                                <span>Percent</span>
-                                                <span>{tokens.tokenPercent}</span>
-                                            </div>
-
-                                            <div>
-                                                <span>Amount</span>
-                                                <span>{tokens.tokenAmount}</span>
-                                            </div>
+                                            <span>60 %</span>
+                                            <span>1000</span>
                                         </div>
                                     )
                                 })
