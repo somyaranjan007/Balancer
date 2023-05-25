@@ -13,11 +13,12 @@ const Stake = () => {
         e.preventDefault();
 
         try {
-            await evmosContract.approveRequiredMethods();
+            // await evmosContract.approveRequiredMethods();
             
-            const transaction = await evmosContract.stake(validator, ethers.utils.parseEther(stakeInput));
-            await signer.sendTransaction(transaction);
+            // const transaction = await evmosContract.stake(validator, ethers.utils.parseEther(stakeInput));
+            // await signer.sendTransaction(transaction);
 
+            console.log(Number(ethers.utils.parseEther(stakeInput)._hex));
             setStakeInput('');
             
         } catch (e) {

@@ -50,31 +50,31 @@ const Portfolio = () => {
             // await evmosContract.setWithdraw({ gasLimit: 1000000 });
             // await evmosContract.withdrawRewards(validator, { gasLimit: 1000000 });
 
-            console.log(Number((await evmosContract.checkUserRewards())._hex));
+            console.log(await evmosContract.checkUserRewards());
 
-            const totalPercent = selectedToken.reduce((total, current) => {
-                return total + Number(current.tokenPercent);
-            }, 0);
+            // const totalPercent = selectedToken.reduce((total, current) => {
+            //     return total + Number(current.tokenPercent);
+            // }, 0);
 
-            console.log(totalPercent);
+            // console.log(totalPercent);
 
-            if (totalPercent === 100) {
-                for (let index = 0; index < selectedToken.length; index++) {
+            // if (totalPercent === 100) {
+            //     for (let index = 0; index < selectedToken.length; index++) {
 
-                    await evmosContract.tokenDestribution(
-                        selectedToken[index].tokenAddress, selectedToken[index].tokenPercent,
-                        { gasLimit: 1000000 }
-                    );
-                }
+            //         await evmosContract.tokenDestribution(
+            //             selectedToken[index].tokenAddress, selectedToken[index].tokenPercent,
+            //             { gasLimit: 1000000 }
+            //         );
+            //     }
 
-                const userDetail = await evmosContract.getUserDetails(address);
+            //     const userDetail = await evmosContract.getUserDetails(address);
 
-                setUserDetails(userDetail);    
-            } else {
-                console.log("You didn't provide enough percent for tokens")
-                setSelectedToken([]);
-                setMaxPercentValue(100);
-            }
+            //     setUserDetails(userDetail);    
+            // } else {
+            //     console.log("You didn't provide enough percent for tokens")
+            //     setSelectedToken([]);
+            //     setMaxPercentValue(100);
+            // }
 
         } catch (error) {
             console.log(error);
